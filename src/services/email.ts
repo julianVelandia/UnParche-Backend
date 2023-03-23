@@ -1,6 +1,6 @@
 import nodemailer from 'nodemailer';
 
-export const transporter = nodemailer.createTransport({
+const transporter = nodemailer.createTransport({
     host : 'smtp.gmail.com',
     port : 587,
     auth : {
@@ -8,3 +8,12 @@ export const transporter = nodemailer.createTransport({
         pass : 'iecnfzzqflvevlsf'
     }
 })
+
+export const sendEmail = async (to:string, message:string, subject:string) => {
+    await transporter.sendMail({
+        from: 'unparcheadm@gmail.com',
+        to: to,
+        subject: subject,
+        html: message
+    })
+}
