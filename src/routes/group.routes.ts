@@ -9,6 +9,6 @@ const router = Router();
 
 router.get("/", getAllGroups);
 router.post("/register", Register);
-router.delete("/",Delete)
-router.put("/",Update)
+router.delete("/delete/:id",Delete);
+router.put("/update/:id",Update);
 export default router;

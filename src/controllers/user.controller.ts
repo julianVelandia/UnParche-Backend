@@ -9,7 +9,7 @@ export const getAllUsers = async (req: Request, res: Response) => {
     return res.status(200).json({ ok: true, data: users });
   } catch (error) {
     console.log(error);
-    return res.status(500).json({ ok: false, msg: "Contact an admin" });
+    return res.status(400).json({ ok: false, msg: "Contact an admin" });
   }
 
 };
@@ -63,7 +63,7 @@ export const Register = async(req:Request, res: Response)=>{
 };
 
 export const Update = async (req: Request, res: Response) => {
-  const { username, email } = req.body;
+  const { username, email, password, password_confirmation } = req.body;
   const userId = req.params.id;
 
   try {
@@ -73,31 +73,38 @@ export const Update = async (req: Request, res: Response) => {
       _id: { $ne: userId },
     });
     if (existingUser) {
-      return res.status(409).json({
+      return res.status(400).json({
         message: 'El correo electrónico o el nombre de usuario ya están registrados',
       });
     }
 
     // Actualizar usuario
-    const user = await UserModel.findByIdAndUpdate(
-      userId,
-      {
-        $set: req.body,
-      },
-      { new: true }
-    );
+    const user = await UserModel.findById(userId);
+    if(!user){
+      return res.status(400).json({ok: false, "msg": "Usuario no encontrado"});
+    }
+    if(password != password_confirmation){
+      return res.status(400).json({ok: false, "msg": "las contraseñas no coinciden"});
+    }
+    const salt: string = await bcrypt.genSalt(10);
+    const passwordCrypt: string = await bcrypt.hash(password, salt)
+    user.username = username;
+    user.email = email;
+    user.password = passwordCrypt;
+    await user.save();
 
     res.status(200).json({
       message: 'Usuario actualizado con éxito',
       user,
     });
+
   } catch (error) {
     res.status(500).json({ message: 'Error al actualizar usuario', error });
   }
 };
 
 
-export const DeleteUser = async (req: Request, res: Response) => {
+export const Delete = async (req: Request, res: Response) => {
   try {
     const { id } = req.params; // Obtén el ID del usuario a eliminar desde los parámetros de la solicitud
 
