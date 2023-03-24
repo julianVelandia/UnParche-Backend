@@ -2,7 +2,6 @@ import UserModel from "../models/User.model";
 import { Request, Response } from "express";
 import bcrypt from "bcrypt"
 import { IUser } from "../interfaces/index"
-
 export const getAllUsers = async (req: Request, res: Response) => {
   try {
     // retornar todos los usuarios registrados
@@ -17,8 +16,10 @@ export const getAllUsers = async (req: Request, res: Response) => {
 export const Register = async(req:Request, res: Response)=>{
   //registro de usuario 
   try {
-    // Validar existencia de la información del usuario
+
+    // las validaciones se haran luego con express validator
     const {email, password, username, password_confirmation} = req.body;
+
     if (!password_confirmation  || !email || !password|| !username) {
       return res.status(400).json({ mensaje: 'Por favor, proporcione todos los datos requeridos' });
     }
@@ -45,6 +46,7 @@ export const Register = async(req:Request, res: Response)=>{
     if (usernameExistente) {
       return res.status(400).json({ mensaje: 'Ya existe un usuario con ese nombre de usuario' });
     }
+
     // Encriptar contraseña
     const salt: string = await bcrypt.genSalt(10);
     const passwordCrypt: string = await bcrypt.hash(password, salt);
@@ -60,8 +62,58 @@ export const Register = async(req:Request, res: Response)=>{
   }
 };
 
+export const Update = async (req: Request, res: Response) => {
+  const { username, email } = req.body;
+  const userId = req.params.id;
+
+  try {
+    // Verificar si el correo electrónico o el nombre de usuario ya existen en la base de datos
+    const existingUser = await UserModel.findOne({
+      $or: [{ username }, { email }],
+      _id: { $ne: userId },
+    });
+    if (existingUser) {
+      return res.status(409).json({
+        message: 'El correo electrónico o el nombre de usuario ya están registrados',
+      });
+    }
+
+    // Actualizar usuario
+    const user = await UserModel.findByIdAndUpdate(
+      userId,
+      {
+        $set: req.body,
+      },
+      { new: true }
+    );
+
+    res.status(200).json({
+      message: 'Usuario actualizado con éxito',
+      user,
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Error al actualizar usuario', error });
+  }
+};
 
 
+export const DeleteUser = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params; // Obtén el ID del usuario a eliminar desde los parámetros de la solicitud
 
+    // Verifica si existe un usuario con el ID proporcionado
+    const usuarioExistente: IUser | null = await UserModel.findById(id);
+    if (!usuarioExistente) {
+      return res.status(404).json({ mensaje: 'El usuario no existe' });
+    }
 
+    // Elimina el usuario de la base de datos
+    await UserModel.findByIdAndDelete(id);
 
+    res.status(200).json({ mensaje: 'Usuario eliminado exitosamente' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ mensaje: 'Ocurrió un error en el servidor al eliminar el usuario' });
+    
+  }
+};
